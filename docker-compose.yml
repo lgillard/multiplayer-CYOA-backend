@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: cyoa-db
+    environment:
+      POSTGRES_DB: cyoa
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d cyoa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cyoa-network
+
+  app:
+    build: .
+    container_name: cyoa-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cyoa
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: 'true'
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: 'true'
+    ports:
+      - "8080:8080"
+    networks:
+      - cyoa-network
+
+networks:
+  cyoa-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
